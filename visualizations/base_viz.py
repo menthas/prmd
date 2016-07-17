@@ -25,7 +25,7 @@ class BaseViz(object):
         if feature == 'tone':
             print(
                 ('*' if data['tone'] > 0 else '-') *
-                int(abs(data['tone'] * 100))
+                int(abs(data['tone'] * 300))
             )
         elif feature == 'beat':
             print(
@@ -37,8 +37,7 @@ class BaseViz(object):
             )
         elif feature == 'energy':
             print(
-                ('*' * (data['min_energy'] * 100)) +
-                ('-' * (data['max_energy'] / 50))
+                '*' * (data['energy'] / 100)
             )
         else:
             print('Feature not supported')

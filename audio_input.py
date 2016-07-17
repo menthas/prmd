@@ -36,7 +36,7 @@ class AudioInput(object):
 
         self.stream = self.py_audio.open(
             format=pyaudio.paFloat32,
-            channels=channels,
+            channels=2,
             rate=self.sample_rate,
             input=True,
             frames_per_buffer=self.buffersize,
@@ -84,10 +84,9 @@ class AudioInput(object):
             f = numpy.fromstring(
                 self.stream.read(self.buffersize), dtype=numpy.dtype('<f'))
             fft = self.fft(f)
-            max_fft = max(fft)
             tone = (
                 numpy.mean(numpy.log10(fft) * numpy.arange(len(fft)))
-                if max_fft > 0 else 0
+                if max(fft) > 0 else 0
             )
             if tone > self.max_energy:
                 tone = self.max_energy
@@ -97,8 +96,7 @@ class AudioInput(object):
             data = {
                 'is_beat': self.tempo(f),
                 'onset': self.onset(f),
-                'min_energy': min(fft),
-                'max_energy': max_fft,
+                'energy': numpy.sum(fft),
                 # this is the overall tone of the song, the sign indicates
                 # lower/high spectrom. the magnitude indicates intensity
                 'tone': tone

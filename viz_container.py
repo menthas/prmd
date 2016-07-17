@@ -66,11 +66,7 @@ class VizContainer(object):
 
     def layout_handler(self, data, time_diff=None):
         if self.use_fadecandy:
-            # TODO: figure out what the write order will be for
-            # multiple FC boards
-            # example call:
-            # self.fc_client.put_pixels(pixel_colors_in_order)
-            pass
+            self.fc_client.put_pixels(self.layout.current_colors)
         if self.use_redis:
             layout = json.dumps(self.layout.current_colors)
             self.redis.set(self.REDIS_LAYOUT_KEY, layout)

@@ -10,6 +10,8 @@ class Layout(object):
     #   ^^ times 2 for the component
     # Note: left and right are defined as you are facing the smaller
     # angle
+    # Note: This DS is arranged by number of LEDs in row. so the total
+    # number of rows would be len() / 2
     default_component = [
         7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1,  # Left
         7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1   # Right
@@ -26,9 +28,7 @@ class Layout(object):
         self.all(self._off)  # set everything to off
 
     def all(self, color):
+        rgb = (int(i * 255) for i in color.rgb)
         self.current_colors = []
         for i in range(self.component_count):
-            component = [
-                [color.rgb] * i for i in self.component
-            ]
-            self.current_colors.append(component)
+            self.current_colors.extend([rgb] * i for i in self.component)

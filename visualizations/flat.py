@@ -32,4 +32,4 @@ class FlatViz(BaseViz):
             (self.config['luminance'] / 100.0) * luminance_factor
         )
         self.layout.all(color)
-        self.console_viz(data, feature='tone')
+        self.console_viz(data, feature='energy')
