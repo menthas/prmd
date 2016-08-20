@@ -7,8 +7,9 @@ class BaseViz(object):
     # name of the visualizer for display purposes
     name = 'BaseViz###'
 
-    def __init__(self, layout):
-        self.layout = layout
+    def __init__(self, container):
+        self.container = container
+        self.layout = container.layout
         self.config = {}
         for key in self.config_def:
             self.config[key] = self.config_def[key]['default']

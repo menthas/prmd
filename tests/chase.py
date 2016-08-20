@@ -6,7 +6,7 @@ sys.path.append('/home/menthas/dev/prmd')
 
 from lib import opc  # NOQA
 
-numLEDs = 5
+numLEDs = 53
 client = opc.Client('localhost:7890')
 
 while True:
@@ -18,5 +18,5 @@ while True:
     for i in range(numLEDs):
         pixels = [(0, 0, 0)] * numLEDs
         pixels[i] = color
-        client.put_pixels(pixels)
-        time.sleep(1)
+        client.put_pixels(pixels, channel=0)
+        time.sleep(0.05)

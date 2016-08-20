@@ -1,20 +1,14 @@
+import numpy as np
 from colour import Color
+
 from base_viz import BaseViz
 
 
 class FlatViz(BaseViz):
     name = "Single Color"
-    config_def = {
-        'color': {
-            'type': 'color_selector',
-            'default': '#FFE300'
-        },
-        'luminance': {
-            'type': 'slider',
-            'range': [0, 100],
-            'default': 50
-        }
-    }
+    config_def = {}
+
+    side = 0
 
     def visualize(self, data, time_diff=None):
         """
@@ -26,10 +20,16 @@ class FlatViz(BaseViz):
             tone: signed float (-1, 1)
         }
         """
-        color = Color(self.config['color'])
-        luminance_factor = (data['tone'] + 1) / 2
+        old_side = None
+        if data['is_beat']:
+            old_side = self.side
+            self.side = (self.side + 1) % 4
+        color = Color(rgb=self.container.get_conf('left_color'))
+        luminance_factor = np.sqrt(min(3000, data['energy'])) / np.sqrt(3000)
         color.luminance = (
-            (self.config['luminance'] / 100.0) * luminance_factor
+            (self.container.get_conf('left_lum') / 100.0) * luminance_factor
         )
-        self.layout.all(color)
-        self.console_viz(data, feature='energy')
+        self.layout.set_side(self.side, color)
+        if old_side is not None:
+            self.layout.set_side(old_side, self.layout._off)
+        # self.console_viz(data, feature='energy')
