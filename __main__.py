@@ -10,6 +10,8 @@ from viz_container import VizContainer  # NOQA
 
 
 def main():
+    # ai = AudioInput(sample_rate=44100, buffersize=512)
+    # ai.init_stream(input_device_index=5, channels=2)
     ai = AudioInput()
     ai.init_stream()
     vc = VizContainer(ai)

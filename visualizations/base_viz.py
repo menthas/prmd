@@ -7,12 +7,16 @@ class BaseViz(object):
     # name of the visualizer for display purposes
     name = 'BaseViz###'
 
+    LEFT_BEACON = 0
+    RIGHT_BEACON = 1
+
     def __init__(self, container):
         self.container = container
         self.layout = container.layout
-        self.config = {}
+        self.config = [{}, {}]
         for key in self.config_def:
-            self.config[key] = self.config_def[key]['default']
+            self.config[self.LEFT_BEACON][key] = self.config_def[key]['value']
+            self.config[self.RIGHT_BEACON][key] = self.config_def[key]['value']
 
     def visualize(self, data, time_diff=None):
         raise NotImplemented
@@ -20,7 +24,7 @@ class BaseViz(object):
     def update_config(self, data):
         for key in self.config_def:
             if key in data:
-                self.config[key] = data[key]
+                self.config[data[key]['beacon']][key] = data[key]['value']
 
     def console_viz(self, data, feature='tone'):
         if feature == 'tone':

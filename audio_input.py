@@ -22,17 +22,29 @@ class AudioInput(object):
         self.stream = None
 
         self.onset = aubio.onset(
-            'default', self.window_size, self.buffersize, self.sample_rate)
+            'specflux', self.window_size, self.buffersize, self.sample_rate)
         self.onset.set_threshold(0.3)
         self.onset.set_silence(-20.)
         self.tempo = aubio.tempo(
             'default', self.window_size, self.buffersize, self.sample_rate)
+
+        self.energy = aubio.specdesc('specflux', self.buffersize * 2)
+        self.pv = aubio.pvoc(self.buffersize * 2, self.buffersize)
+
+        self.pitch = aubio.pitch(
+            "yinfft", self.window_size, self.buffersize, self.sample_rate)
+        self.pitch.set_unit("midi")
+        self.pitch.set_tolerance(0.8)
 
         self.py_audio = pyaudio.PyAudio()
 
     def init_stream(self, input_device_index=None, channels=None):
         if not input_device_index or not channels:
             input_device_index, channels = self._get_input_device()
+
+        logging.info("Using input device %s with %s channels" % (
+            input_device_index, channels
+        ))
 
         self.stream = self.py_audio.open(
             format=pyaudio.paFloat32,
@@ -49,8 +61,9 @@ class AudioInput(object):
             if data.get('maxInputChannels', 0) > 0:
                 valid_devices.append(
                     (data['maxInputChannels'], data.get('index'),
-                        data.get('name'))
+                        data.get('name'), data.get('defaultSampleRate'))
                 )
+                print(data)
         if len(valid_devices) == 0:
             logging.error('AudioInput: Couldn\'t find a valid input device')
             raise Exception('AudioInput: invalid input device')
@@ -58,7 +71,9 @@ class AudioInput(object):
             logging.info(
                 'AudioInput: Found the following devices, using the last one:'
                 '\n%s' % '\n'.join([
-                    '%s. %s' % (i, info[2])
+                    '%s. %s (i:%s ch:%s SR:%s)' % (
+                        i, info[2], info[1], info[0], info[3]
+                    )
                     for i, info in enumerate(valid_devices)
                 ])
             )
@@ -71,36 +86,21 @@ class AudioInput(object):
     def unregister_read_listener(self, callback):
         self._read_listeners.remove(callback)
 
-    def fft(self, data, log_scale=False):
-        left, right = numpy.split(numpy.abs(numpy.fft.fft(data)), 2)
-        ys = numpy.add(left, right[::-1])
-        if log_scale:
-            ys = numpy.multiply(20, numpy.log10(ys))
-        return ys
-
     def read_loop(self):
         _time = time.time()
         while True:
             f = numpy.fromstring(
                 self.stream.read(self.buffersize), dtype=numpy.dtype('<f'))
-            fft = self.fft(f)
-            tone = (
-                numpy.mean(numpy.log10(fft) * numpy.arange(len(fft)))
-                if max(fft) > 0 else 0
-            )
-            if tone > self.max_energy:
-                tone = self.max_energy
-            elif tone < -1 * self.max_energy:
-                tone = -1 * self.max_energy
-            tone /= float(self.max_energy)
+
             data = {
                 'is_beat': self.tempo(f),
                 'onset': self.onset(f),
-                'energy': numpy.sum(fft),
-                # this is the overall tone of the song, the sign indicates
-                # lower/high spectrom. the magnitude indicates intensity
-                'tone': tone
+                'left_energy': 30,
+                'energy': self.energy(self.pv(f[:self.buffersize]))[0],
+                'pitch_midi': int(self.pitch(f)[0])
             }
+            data['energy_norm'] = min(1, data['energy'] / 1500)
+            data['pitch_norm'] = min(1, data['pitch_midi'] / 137)
 
             time_diff = time.time() - _time
             _time = time.time()

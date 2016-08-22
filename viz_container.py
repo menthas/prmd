@@ -3,6 +3,7 @@ import ujson as json
 
 from layout import Layout
 from visualizations.flat import FlatViz
+from visualizations.custom import CustomViz
 from lib import opc
 
 
@@ -11,14 +12,15 @@ class VizContainer(object):
     REDIS_CONF_CHANGED_KEY = 'prmd:config_changed'
     REDIS_CONF_VALUE_KEY = 'prmd:config_value'
     REDIS_VIZ_LIST = 'prmd:viz_list'
+    REDIS_ACTIVE_VIZ = 'prmd:active_viz'
 
     active_viz = None
     use_redis = True
 
     FADECANDY_SERVER = 'localhost:7890'
 
-    LEFT = 0
-    RIGHT = 1
+    LEFT = FlatViz.LEFT_BEACON
+    RIGHT = FlatViz.RIGHT_BEACON
 
     global_config = {
         'left_on': True,
@@ -26,14 +28,14 @@ class VizContainer(object):
         'left_lum': 30,
         'left_rows': [1, 1, 1, 1, 1, 1, 1, 1, 1],
         'left_sides': [1, 1, 1, 1],
-        'left_spectrum': [1] * 25,
+        'left_spectrum': [1] * 20,
 
         'right_on': True,
         'right_color': (147 / 255.0, 0 / 255.0, 255 / 255.0),
         'right_lum': 30,
         'right_rows': [1, 1, 1, 1, 1, 1, 1, 1, 1],
         'right_sides': [1, 1, 1, 1],
-        'right_spectrum': [1] * 25,
+        'right_spectrum': [1] * 20,
     }
 
     def __init__(self, audio_input):
@@ -65,9 +67,11 @@ class VizContainer(object):
 
     def create_viz_list(self):
         self.visualizations = [
+            CustomViz(self),
             FlatViz(self)
         ]
         if self.use_redis:
+            self.redis.delete(self.REDIS_VIZ_LIST)
             self.redis.rpush(
                 self.REDIS_VIZ_LIST, *[v.name for v in self.visualizations]
             )
@@ -83,9 +87,9 @@ class VizContainer(object):
             config = json.loads(self.redis.get(self.REDIS_CONF_VALUE_KEY))
             for key in config['global']:
                 if '_rows' in key or '_sides' in key:
-                    update = config['global'][key]
-                    config['global'][key] = self.global_config[key]
-                    config['global'][key][update[0]] = update[1]
+                    for update in config['global'][key]:
+                        config['global'][key] = self.global_config[key]
+                        config['global'][key][update[0]] = update[1]
             self.global_config.update(config['global'])
             self.visualizations[self.active_viz].update_config(config['viz'])
 
@@ -100,6 +104,9 @@ class VizContainer(object):
         if self.use_redis:
             config = json.dumps(self.visualizations[viz_index].config_def)
             self.redis.set(self.REDIS_CONF_DEF_KEY, config)
+            self.redis.set(
+                self.REDIS_ACTIVE_VIZ, self.visualizations[viz_index].name
+            )
 
     def current_viz(self, data, time_diff=None):
         if self.active_viz is not None:
